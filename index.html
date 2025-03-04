@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>学生学习助手</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; margin: 0; padding: 0; display: flex; }
+        .sidebar { width: 200px; background-color: #2c3e50; color: white; height: 100vh; padding: 15px; position: fixed; top: 0; left: 0; overflow-y: auto; }
+        .sidebar h2 { margin: 0 0 15px; font-size: 16px; }
+        .sidebar .menu { margin-bottom: 10px; }
+        .sidebar .menu-btn { background: none; color: white; border: none; padding: 8px; cursor: pointer; width: 100%; text-align: left; font-size: 14px; }
+        .sidebar .dropdown { display: none; background-color: #34495e; padding: 8px; }
+        .sidebar .menu:hover .dropdown { display: block; }
+        .sidebar .dropdown a { color: white; text-decoration: none; display: block; padding: 5px; cursor: pointer; font-size: 12px; }
+        .sidebar .dropdown a:hover { background-color: #3e5c76; }
+        .content { flex: 1; margin-left: 220px; height: 100vh; display: flex; flex-direction: column; }
+        .ai-section { background: white; padding: 15px; height: 33vh; overflow: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .note-section { flex: 1; background: white; padding: 15px; overflow: auto; }
+        h1 { color: #2c3e50; text-align: center; margin: 0 0 15px; font-size: 20px; }
+        form { margin-top: 15px; }
+        textarea, input[type="text"] { width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 5px; margin-bottom: 10px; box-sizing: border-box; }
+        select { padding: 8px; margin-bottom: 10px; width: 100%; }
+        input[type="submit"] { background-color: #2ecc71; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
+        .response { margin-top: 15px; padding: 10px; background-color: #ecf0f1; border-radius: 5px; }
+        .toggle-btn { background-color: #3498db; color: white; padding: 8px; border: none; border-radius: 5px; cursor: pointer; position: fixed; top: 5px; right: 5px; z-index: 10; }
+        .delete-btn { background-color: #e74c3c; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        .hidden { height: 0; overflow: hidden; padding: 0; }
+        .history-menu { margin-top: 15px; }
+        .history-btn { background: none; border: none; color: #2c3e50; padding: 5px; cursor: pointer; font-size: 14px; }
+        .history-dropdown { display: none; background-color: #f9f9f9; padding: 10px; border-radius: 5px; max-height: 20vh; overflow-y: auto; }
+        .history-question { margin-bottom: 5px; }
+        .history-question a { color: #2c3e50; text-decoration: none; display: block; padding: 5px; }
+        .history-question a:hover { background-color: #ddd; }
+        .history-answer { display: none; padding: 10px; background-color: #ecf0f1; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <h2>笔记目录</h2>
+        <div class="menu">
+            <button class="menu-btn">数学</button>
+            <div class="dropdown">
+                <!-- 示例笔记 -->
+                <a href="#">勾股定理</a>
+                <a href="#">加法公式</a>
+            </div>
+        </div>
+        <div class="menu">
+            <button class="menu-btn">科学</button>
+            <div class="dropdown">
+                <a href="#">浮力</a>
+            </div>
+        </div>
+        <div class="menu">
+            <button class="menu-btn">语文</button>
+            <div class="dropdown">
+                <a href="#">古诗</a>
+            </div>
+        </div>
+        <div class="menu">
+            <button class="menu-btn">英语</button>
+            <div class="dropdown">
+                <a href="#">单词表</a>
+            </div>
+        </div>
+    </div>
+    <div class="content">
+        <button class="toggle-btn" onclick="toggleAI()">隐藏/展开 AI</button>
+        <div class="ai-section" id="aiSection">
+            <h1>学生学习助手</h1>
+            <form method="POST">
+                <p>请输入你的问题（比如：勾股定理是什么？）：</p>
+                <textarea name="question" rows="2"></textarea>
+                <input type="submit" value="提交问题">
+            </form>
+            <div class="response">
+                <p><strong>你的问题：</strong> 示例问题</p>
+                <p><strong>AI回答：</strong> 示例回答</p>
+            </div>
+            <div class="history-menu">
+                <button class="history-btn" onclick="toggleHistory()">历史记录</button>
+                <div class="history-dropdown" id="historyDropdown">
+                    <div class="history-question">
+                        <a href="#" onclick="toggleAnswer(this, event)">勾股定理是什么？</a>
+                        <div class="history-answer">这是一个数学定理...</div>
+                    </div>
+                    <div class="history-question">
+                        <a href="#" onclick="toggleAnswer(this, event)">1+1等于几？</a>
+                        <div class="history-answer">1+1等于2</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="note-section">
+            <form method="POST">
+                <p>保存你的笔记：</p>
+                <select name="subject">
+                    <option value="math">数学</option>
+                    <option value="science">科学</option>
+                    <option value="language">语文</option>
+                    <option value="english">英语</option>
+                </select>
+                <input type="text" name="title" placeholder="输入笔记标题" required>
+                <textarea name="content" rows="4" placeholder="输入笔记内容" required></textarea>
+                <input type="submit" value="保存笔记">
+            </form>
+            <form method="POST">
+                <p>编辑笔记：示例笔记</p>
+                <input type="text" name="edit_title" value="示例笔记" required>
+                <textarea name="edit_content" rows="8" required>示例内容</textarea>
+                <input type="submit" value="保存修改">
+                <input type="button" class="delete-btn" value="删除笔记" onclick="alert('删除功能暂不可用')">
+            </form>
+        </div>
+    </div>
+    <script>
+        function toggleAI() {
+            var aiSection = document.getElementById('aiSection');
+            if (aiSection.classList.contains('hidden')) {
+                aiSection.classList.remove('hidden');
+                aiSection.style.height = '33vh';
+            } else {
+                aiSection.classList.add('hidden');
+                aiSection.style.height = '0';
+            }
+        }
+
+        function toggleHistory() {
+            var dropdown = document.getElementById('historyDropdown');
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            } else {
+                dropdown.style.display = 'block';
+            }
+        }
+
+        function toggleAnswer(element, event) {
+            event.preventDefault();
+            var answer = element.nextElementSibling;
+            if (answer.style.display === 'block') {
+                answer.style.display = 'none';
+            } else {
+                answer.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
