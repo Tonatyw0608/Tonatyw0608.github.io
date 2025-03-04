@@ -20,7 +20,7 @@
         form { margin-top: 15px; }
         textarea, input[type="text"] { width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 5px; margin-bottom: 10px; box-sizing: border-box; }
         select { padding: 8px; margin-bottom: 10px; width: 100%; }
-        input[type="submit"] { background-color: #2ecc71; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
+        input[type="submit"], input[type="button"] { background-color: #2ecc71; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
         .response { margin-top: 15px; padding: 10px; background-color: #ecf0f1; border-radius: 5px; }
         .toggle-btn { background-color: #3498db; color: white; padding: 8px; border: none; border-radius: 5px; cursor: pointer; position: fixed; top: 5px; right: 5px; z-index: 10; }
         .delete-btn { background-color: #e74c3c; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
@@ -37,83 +37,54 @@
 <body>
     <div class="sidebar" id="sidebar">
         <h2>笔记目录</h2>
-        <div class="menu">
-            <button class="menu-btn">数学</button>
-            <div class="dropdown">
-                <!-- 示例笔记 -->
-                <a href="#">勾股定理</a>
-                <a href="#">加法公式</a>
-            </div>
-        </div>
-        <div class="menu">
-            <button class="menu-btn">科学</button>
-            <div class="dropdown">
-                <a href="#">浮力</a>
-            </div>
-        </div>
-        <div class="menu">
-            <button class="menu-btn">语文</button>
-            <div class="dropdown">
-                <a href="#">古诗</a>
-            </div>
-        </div>
-        <div class="menu">
-            <button class="menu-btn">英语</button>
-            <div class="dropdown">
-                <a href="#">单词表</a>
-            </div>
-        </div>
+        <div class="menu"><button class="menu-btn">数学</button><div class="dropdown" id="math-notes"></div></div>
+        <div class="menu"><button class="menu-btn">科学</button><div class="dropdown" id="science-notes"></div></div>
+        <div class="menu"><button class="menu-btn">语文</button><div class="dropdown" id="language-notes"></div></div>
+        <div class="menu"><button class="menu-btn">英语</button><div class="dropdown" id="english-notes"></div></div>
     </div>
     <div class="content">
         <button class="toggle-btn" onclick="toggleAI()">隐藏/展开 AI</button>
         <div class="ai-section" id="aiSection">
             <h1>学生学习助手</h1>
-            <form method="POST">
+            <form id="questionForm" onsubmit="submitQuestion(event)">
                 <p>请输入你的问题（比如：勾股定理是什么？）：</p>
-                <textarea name="question" rows="2"></textarea>
+                <textarea name="question" rows="2" id="questionInput"></textarea>
                 <input type="submit" value="提交问题">
             </form>
-            <div class="response">
-                <p><strong>你的问题：</strong> 示例问题</p>
-                <p><strong>AI回答：</strong> 示例回答</p>
-            </div>
+            <div class="response" id="responseArea"></div>
             <div class="history-menu">
                 <button class="history-btn" onclick="toggleHistory()">历史记录</button>
-                <div class="history-dropdown" id="historyDropdown">
-                    <div class="history-question">
-                        <a href="#" onclick="toggleAnswer(this, event)">勾股定理是什么？</a>
-                        <div class="history-answer">这是一个数学定理...</div>
-                    </div>
-                    <div class="history-question">
-                        <a href="#" onclick="toggleAnswer(this, event)">1+1等于几？</a>
-                        <div class="history-answer">1+1等于2</div>
-                    </div>
-                </div>
+                <div class="history-dropdown" id="historyDropdown"></div>
             </div>
         </div>
         <div class="note-section">
-            <form method="POST">
+            <form id="saveNoteForm" onsubmit="saveNote(event)">
                 <p>保存你的笔记：</p>
-                <select name="subject">
+                <select name="subject" id="noteSubject">
                     <option value="math">数学</option>
                     <option value="science">科学</option>
                     <option value="language">语文</option>
                     <option value="english">英语</option>
                 </select>
-                <input type="text" name="title" placeholder="输入笔记标题" required>
-                <textarea name="content" rows="4" placeholder="输入笔记内容" required></textarea>
+                <input type="text" name="title" id="noteTitle" placeholder="输入笔记标题" required>
+                <textarea name="content" rows="4" id="noteContent" placeholder="输入笔记内容" required></textarea>
                 <input type="submit" value="保存笔记">
             </form>
-            <form method="POST">
-                <p>编辑笔记：示例笔记</p>
-                <input type="text" name="edit_title" value="示例笔记" required>
-                <textarea name="edit_content" rows="8" required>示例内容</textarea>
-                <input type="submit" value="保存修改">
-                <input type="button" class="delete-btn" value="删除笔记" onclick="alert('删除功能暂不可用')">
-            </form>
+            <div id="editNoteSection" style="display: none;">
+                <form id="editNoteForm" onsubmit="editNote(event)">
+                    <p id="editNoteTitleDisplay"></p>
+                    <input type="hidden" id="editNoteId">
+                    <input type="text" name="edit_title" id="editNoteTitle" required>
+                    <textarea name="edit_content" rows="8" id="editNoteContent" required></textarea>
+                    <input type="submit" value="保存修改">
+                    <input type="button" class="delete-btn" id="deleteNoteBtn" value="删除笔记" onclick="deleteNote()">
+                </form>
+            </div>
         </div>
     </div>
     <script>
+        const BACKEND_URL = 'https://yourapp.onrender.com'; // 后续替换为 Render URL
+
         function toggleAI() {
             var aiSection = document.getElementById('aiSection');
             if (aiSection.classList.contains('hidden')) {
@@ -127,22 +98,125 @@
 
         function toggleHistory() {
             var dropdown = document.getElementById('historyDropdown');
-            if (dropdown.style.display === 'block') {
-                dropdown.style.display = 'none';
-            } else {
-                dropdown.style.display = 'block';
-            }
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
         }
 
         function toggleAnswer(element, event) {
             event.preventDefault();
             var answer = element.nextElementSibling;
-            if (answer.style.display === 'block') {
-                answer.style.display = 'none';
-            } else {
-                answer.style.display = 'block';
-            }
+            answer.style.display = answer.style.display === 'block' ? 'none' : 'block';
         }
+
+        function submitQuestion(event) {
+            event.preventDefault();
+            var question = document.getElementById('questionInput').value;
+            fetch(BACKEND_URL + '/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: question })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('responseArea').innerHTML = `<p><strong>你的问题：</strong> ${question}</p><p><strong>AI回答：</strong> ${data.answer}</p>`;
+                loadHistory();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function saveNote(event) {
+            event.preventDefault();
+            var subject = document.getElementById('noteSubject').value;
+            var title = document.getElementById('noteTitle').value;
+            var content = document.getElementById('noteContent').value;
+            fetch(BACKEND_URL + '/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: title, content: content, subject: subject })
+            })
+            .then(() => {
+                document.getElementById('saveNoteForm').reset();
+                loadNotes();
+            });
+        }
+
+        function editNote(event) {
+            event.preventDefault();
+            var noteId = document.getElementById('editNoteId').value;
+            var title = document.getElementById('editNoteTitle').value;
+            var content = document.getElementById('editNoteContent').value;
+            fetch(BACKEND_URL + '/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ edit_note_id: noteId, edit_title: title, edit_content: content })
+            })
+            .then(() => {
+                document.getElementById('editNoteSection').style.display = 'none';
+                loadNotes();
+            });
+        }
+
+        function deleteNote() {
+            if (!confirm('确定要删除这篇笔记吗？')) return;
+            var noteId = document.getElementById('editNoteId').value;
+            fetch(BACKEND_URL + '/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ delete_note_id: noteId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('editNoteSection').style.display = 'none';
+                    loadNotes();
+                }
+            });
+        }
+
+        function loadNotes() {
+            fetch(BACKEND_URL + '/notes')
+            .then(response => response.json())
+            .then(notes => {
+                ['math', 'science', 'language', 'english'].forEach(subject => {
+                    var dropdown = document.getElementById(subject + '-notes');
+                    dropdown.innerHTML = '';
+                    notes.filter(n => n.subject === subject).forEach(note => {
+                        var a = document.createElement('a');
+                        a.href = '#';
+                        a.setAttribute('data-note-id', note.id);
+                        a.textContent = note.title;
+                        a.onclick = () => showEditNote(note);
+                        dropdown.appendChild(a);
+                    });
+                });
+            });
+        }
+
+        function showEditNote(note) {
+            document.getElementById('editNoteSection').style.display = 'block';
+            document.getElementById('editNoteTitleDisplay').textContent = '编辑笔记：' + note.title;
+            document.getElementById('editNoteId').value = note.id;
+            document.getElementById('editNoteTitle').value = note.title;
+            document.getElementById('editNoteContent').value = note.content;
+        }
+
+        function loadHistory() {
+            fetch(BACKEND_URL + '/history')
+            .then(response => response.json())
+            .then(history => {
+                var dropdown = document.getElementById('historyDropdown');
+                dropdown.innerHTML = '';
+                history.forEach(item => {
+                    var div = document.createElement('div');
+                    div.className = 'history-question';
+                    div.innerHTML = `<a href="#" onclick="toggleAnswer(this, event)">${item.question.substring(0, 50)}</a><div class="history-answer">${item.answer}</div>`;
+                    dropdown.appendChild(div);
+                });
+            });
+        }
+
+        // 页面加载时获取初始数据
+        loadNotes();
+        loadHistory();
     </script>
 </body>
 </html>
