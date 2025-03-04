@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>学生学习助手</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; margin: 0; padding: 0; display: flex; }
+        .sidebar { width: 200px; background-color: #2c3e50; color: white; height: 100vh; padding: 15px; position: fixed; top: 0; left: 0; overflow-y: auto; }
+        .sidebar h2 { margin: 0 0 15px; font-size: 16px; }
+        .sidebar .menu { margin-bottom: 10px; }
+        .sidebar .menu-btn { background: none; color: white; border: none; padding: 8px; cursor: pointer; width: 100%; text-align: left; font-size: 14px; }
+        .sidebar .dropdown { display: none; background-color: #34495e; padding: 8px; }
+        .sidebar .menu:hover .dropdown { display: block; }
+        .sidebar .dropdown a { color: white; text-decoration: none; display: block; padding: 5px; cursor: pointer; font-size: 12px; }
+        .sidebar .dropdown a:hover { background-color: #3e5c76; }
+        .content { flex: 1; margin-left: 220px; height: 100vh; display: flex; flex-direction: column; }
+        .ai-section { background: white; padding: 15px; height: 33vh; overflow: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .note-section { flex: 1; background: white; padding: 15px; overflow: auto; }
+        h1 { color: #2c3e50; text-align: center; margin: 0 0 15px; font-size: 20px; }
+        form { margin-top: 15px; }
+        textarea, input[type="text"] { width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 5px; margin-bottom: 10px; box-sizing: border-box; }
+        select { padding: 8px; margin-bottom: 10px; width: 100%; }
+        input[type="submit"] { background-color: #2ecc71; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
+        .response { margin-top: 15px; padding: 10px; background-color: #ecf0f1; border-radius: 5px; }
+        .toggle-btn { background-color: #3498db; color: white; padding: 8px; border: none; border-radius: 5px; cursor: pointer; position: fixed; top: 5px; right: 5px; z-index: 10; }
+        .delete-btn { background-color: #e74c3c; color: white; padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        .hidden { height: 0; overflow: hidden; padding: 0; }
+        .history-menu { margin-top: 15px; }
+        .history-btn { background: none; border: none; color: #2c3e50; padding: 5px; cursor: pointer; font-size: 14px; }
+        .history-dropdown { display: none; background-color: #f9f9f9; padding: 10px; border-radius: 5px; max-height: 20vh; overflow-y: auto; }
+        .history-question { margin-bottom: 5px; }
+        .history-question a { color: #2c3e50; text-decoration: none; display: block; padding: 5px; }
+        .history-question a:hover { background-color: #ddd; }
+        .history-answer { display: none; padding: 10px; background-color: #ecf0f1; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <h2>笔记目录</h2>
+        <div class="menu">
+            <button class="menu-btn">数学</button>
+            <div class="dropdown">
+                {% for note in notes %}
+                {% if note.subject == 'math' %}
+                <a href="?edit={{ note.id }}" data-note-id="{{ note.id }}">{{ note.title }}</a>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="menu">
+            <button class="menu-btn">科学</button>
+            <div class="dropdown">
+                {% for note in notes %}
+                {% if note.subject == 'science' %}
+                <a href="?edit={{ note.id }}" data-note-id="{{ note.id }}">{{ note.title }}</a>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="menu">
+            <button class="menu-btn">语文</button>
+            <div class="dropdown">
+                {% for note in notes %}
+                {% if note.subject == 'language' %}
+                <a href="?edit={{ note.id }}" data-note-id="{{ note.id }}">{{ note.title }}</a>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="menu">
+            <button class="menu-btn">英语</button>
+            <div class="dropdown">
+                {% for note in notes %}
+                {% if note.subject == 'english' %}
+                <a href="?edit={{ note.id }}" data-note-id="{{ note.id }}">{{ note.title }}</a>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="content">
+        <button class="toggle-btn" onclick="toggleAI()">隐藏/展开 AI</button>
+        <div class="ai-section" id="aiSection">
+            <h1>学生学习助手</h1>
+            <form method="POST">
+                {% csrf_token %}
+                <p>请输入你的问题（比如：勾股定理是什么？）：</p>
+                <textarea name="question" rows="2">{{ question }}</textarea>
+                <input type="submit" value="提交问题">
+            </form>
+            {% if answer %}
+            <div class="response">
+                <p><strong>你的问题：</strong> {{ question }}</p>
+                <p><strong>AI回答：</strong> {{ answer }}</p>
+            </div>
+            {% endif %}
+            <!-- 历史记录 -->
+            <div class="history-menu">
+                <button class="history-btn" onclick="toggleHistory()">历史记录</button>
+                <div class="history-dropdown" id="historyDropdown">
+                    {% for item in history %}
+                    <div class="history-question">
+                        <a href="#" onclick="toggleAnswer(this, event)">{{ item.question|truncatechars:50 }}</a>
+                        <div class="history-answer">{{ item.answer }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="note-section">
+            <form method="POST">
+                {% csrf_token %}
+                <p>保存你的笔记：</p>
+                <select name="subject">
+                    <option value="math">数学</option>
+                    <option value="science">科学</option>
+                    <option value="language">语文</option>
+                    <option value="english">英语</option>
+                </select>
+                <input type="text" name="title" placeholder="输入笔记标题" required>
+                <textarea name="content" rows="4" placeholder="输入笔记内容" required></textarea>
+                <input type="submit" value="保存笔记">
+            </form>
+            {% if edit_note %}
+            <form method="POST" id="editForm">
+                {% csrf_token %}
+                <p>编辑笔记：{{ edit_note.title }}</p>
+                <input type="hidden" name="edit_note_id" value="{{ edit_note.id }}">
+                <input type="text" name="edit_title" value="{{ edit_note.title }}" required>
+                <textarea name="edit_content" rows="8" required>{{ edit_note.content }}</textarea>
+                <input type="submit" value="保存修改">
+                <input type="hidden" name="delete_note_id" value="{{ edit_note.id }}" id="deleteNoteId">
+                <input type="button" class="delete-btn" value="删除笔记" onclick="deleteNote()">
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+        function toggleAI() {
+            var aiSection = document.getElementById('aiSection');
+            if (aiSection.classList.contains('hidden')) {
+                aiSection.classList.remove('hidden');
+                aiSection.style.height = '33vh';
+            } else {
+                aiSection.classList.add('hidden');
+                aiSection.style.height = '0';
+            }
+        }
+
+        function toggleHistory() {
+            var dropdown = document.getElementById('historyDropdown');
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            } else {
+                dropdown.style.display = 'block';
+            }
+        }
+
+        function toggleAnswer(element, event) {
+            event.preventDefault();
+            var answer = element.nextElementSibling;
+            if (answer.style.display === 'block') {
+                answer.style.display = 'none';
+            } else {
+                answer.style.display = 'block';
+            }
+        }
+
+        function deleteNote() {
+            if (!confirm('确定要删除这篇笔记吗？')) return;
+
+            var noteId = document.getElementById('deleteNoteId').value;
+            console.log('删除笔记 ID: ' + noteId);
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    console.log('请求状态: ' + xhr.status);
+                    console.log('响应内容: ' + xhr.responseText);
+                    if (xhr.status === 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.status === 'success') {
+                            console.log('删除成功，移除笔记 ID: ' + noteId);
+                            var noteLink = document.querySelector(`a[data-note-id="${noteId}"]`);
+                            if (noteLink) {
+                                console.log('找到笔记链接，移除中');
+                                noteLink.parentNode.removeChild(noteLink);
+                                var dropdown = noteLink.closest('.dropdown');
+                                if (dropdown && dropdown.children.length === 0) {
+                                    dropdown.style.display = 'none';
+                                }
+                            } else {
+                                console.log('未找到笔记链接 ID: ' + noteId);
+                            }
+                            document.getElementById('editForm').style.display = 'none';
+                        } else {
+                            alert('删除失败：' + response.message);
+                        }
+                    } else {
+                        alert('请求失败，状态码：' + xhr.status);
+                    }
+                }
+            };
+            var csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+            xhr.send('delete_note_id=' + noteId + '&csrfmiddlewaretoken=' + csrfToken);
+        }
+    </script>
+</body>
+</html>
